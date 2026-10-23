@@ -1,0 +1,19 @@
+{
+  "generated_at": "2026-10-21T10:02:12.997Z",
+  "as_of": "2026-10-21",
+  "authors": 10,
+  "books": 18,
+  "royalty_snapshots": 18,
+  "pending_authors": [
+    "AUTH001",
+    "AUTH002",
+    "AUTH003",
+    "AUTH004",
+    "AUTH005",
+    "AUTH006",
+    "AUTH007",
+    "AUTH009",
+    "AUTH010"
+  ],
+  "note": "Derived snapshots, not historical payout transactions. Status indicators must be recalculated at runtime."
+}

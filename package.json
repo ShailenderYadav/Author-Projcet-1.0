@@ -1,0 +1,12 @@
+{
+  "name": "bookleaf-royalty-automation-assignment-2",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "prepare": "node scripts/prepare-data.mjs && node scripts/build-workflow.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "sample": "node scripts/sample-summary.mjs"
+  }
+}

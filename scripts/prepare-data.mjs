@@ -1,0 +1,20 @@
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
+import {summariseAuthor} from './royalty.mjs';
+const root=new URL('../',import.meta.url);
+const data=JSON.parse(await readFile(new URL('data/bookleaf_sample_data.json',root),'utf8'));
+const asOf=process.env.AS_OF_DATE||new Date().toISOString().slice(0,10);
+const csv=(rows,fields)=>[fields,...rows.map(r=>fields.map(f=>Array.isArray(r[f])?r[f].join('|'):r[f]??''))].map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(',')).join('\r\n')+'\r\n';
+await mkdir(new URL('generated/',root),{recursive:true});
+const authors=data.authors.map(({books,...a})=>a);
+const books=data.authors.flatMap(a=>a.books.map(b=>({...b,author_external_id:a.author_id})));
+// Separate immutable source values from date-dependent computed fields.
+await writeFile(new URL('generated/authors.csv',root),csv(authors,['author_id','name','email','phone','city','joined_date']));
+await writeFile(new URL('generated/books.csv',root),csv(books,['book_id','author_external_id','title','isbn','genre','publication_date','status','mrp','print_partner','available_on']));
+await writeFile(new URL('generated/royalty-snapshots.csv',root),csv(books.map(b=>({...b,snapshot_id:`SNAP-${b.book_id}`,book_external_id:b.book_id,as_of:asOf})),['snapshot_id','book_external_id','author_external_id','as_of','author_royalty_per_copy','total_copies_sold','total_royalty_earned','royalty_paid','royalty_pending','last_royalty_payout_date']));
+const summaries=data.authors.map(a=>summariseAuthor(a,asOf));
+await writeFile(new URL('generated/author-summaries.json',root),JSON.stringify(summaries,null,2)+'\n');
+const sample={request_id:'REPLACE_WITH_BUBBLE_NOTIFICATIONLOG_UNIQUE_ID',author_id:data.authors[0].author_id,as_of:asOf,author:data.authors[0]};
+await writeFile(new URL('examples/webhook-request.json',root),JSON.stringify(sample,null,2)+'\n');
+const manifest={generated_at:new Date().toISOString(),as_of:asOf,authors:authors.length,books:books.length,royalty_snapshots:books.length,pending_authors:summaries.filter(a=>a.totals.pending>0).map(a=>a.author_id),note:'Derived snapshots, not historical payout transactions. Status indicators must be recalculated at runtime.'};
+await writeFile(new URL('generated/import-manifest.json',root),JSON.stringify(manifest,null,2)+'\n');
+console.log(`Prepared ${authors.length} authors, ${books.length} books, ${books.length} royalty snapshots. As of ${asOf}.`);

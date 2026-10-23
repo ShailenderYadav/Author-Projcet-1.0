@@ -1,0 +1,32 @@
+LOCAL FIXTURE — NOT AI-GENERATED, NOT SENT
+
+Subject: Your BookLeaf royalty overview
+
+Hi Priya,
+
+Here is your BookLeaf royalty snapshot and the status of your books.
+
+Royalty snapshot as of 2026-10-21
+
+Whispers of the Ganges
+Copies sold: 342
+Earned: ₹11,970.00 | Paid: ₹8,400.00 | Pending: ₹3,570.00
+Last payout: 2025-10-15
+Status: Overdue
+
+The Saffron Diaries
+Copies sold: 189
+Earned: ₹7,938.00 | Paid: ₹7,938.00 | Pending: ₹0.00
+Last payout: 2025-12-01
+Status: Fully paid
+
+Across all your books: earned ₹19,908.00, paid ₹16,338.00, pending ₹3,570.00.
+
+BookLeaf pays royalties quarterly, within 45 days after quarter end. The author receives 80% of net profit after printing costs, platform commission, and shipping.
+The current policy window for eligible royalties is the quarter ending 2026-09-30, payable within 45 days, by 2026-11-14. Your snapshot has no sales-period ledger or verified payment schedule, so this is a policy window, not a confirmed payment date.
+At least one book is flagged for overdue review using the dashboard’s 90-day rule. This flag is separate from payout eligibility; our team needs to check the underlying royalty periods and payment records before confirming a resolution.
+
+If you have questions about these figures, please contact the BookLeaf team so we can review them together.
+
+Warm regards,
+BookLeaf Publishing

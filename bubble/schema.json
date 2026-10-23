@@ -1,0 +1,35 @@
+{
+  "description": "Blueprint for manual/Bubble-agent implementation, not an importable Bubble application export.",
+  "option_sets": {
+    "UserRole": ["author", "admin"],
+    "RoyaltyStatus": ["Fully paid", "Pending", "Overdue"],
+    "NotificationStatus": ["Queued", "Processing", "Success", "Failed"]
+  },
+  "types": {
+    "User": {
+      "native_fields": ["email", "password"],
+      "custom_fields": {"display_name":"text", "role":"UserRole", "author_profile":"Author"}
+    },
+    "Author": {
+      "author_id":"text", "name":"text", "email":"text", "phone":"text", "city":"text", "joined_date":"date", "owner":"User"
+    },
+    "Book": {
+      "book_id":"text", "author_external_id":"text", "author":"Author", "owner":"User", "title":"text", "isbn":"text", "genre":"text", "publication_date":"date", "status":"text", "mrp":"number", "print_partner":"text", "available_on":"list of texts", "availability_raw":"text"
+    },
+    "RoyaltySnapshot": {
+      "snapshot_id":"text", "book_external_id":"text", "author_external_id":"text", "book":"Book", "author":"Author", "owner":"User", "as_of":"date", "author_royalty_per_copy":"number", "total_copies_sold":"number", "total_royalty_earned":"number", "royalty_paid":"number", "royalty_pending":"number", "last_royalty_payout_date":"date"
+    },
+    "Payout": {
+      "author":"Author", "book":"Book", "owner":"User", "amount":"number", "paid_at":"date", "reference":"text", "source_note":"text"
+    },
+    "NotificationLog": {
+      "author":"Author", "author_external_id":"text", "owner":"User", "requested_by":"User", "status":"text", "subject":"text", "email_body":"text", "error_message":"text", "delivery_status":"text", "total_earned":"number", "total_paid":"number", "total_pending":"number", "generated_at":"date", "completed_at":"date", "attempt_count":"number", "payload_as_of":"date"
+    }
+  },
+  "important": [
+    "NotificationLog.status deliberately uses text so Data API JSON can write exact enum strings without option-set ID conversion.",
+    "The built-in Bubble unique ID on NotificationLog is the n8n request_id; do not create a new unrelated ID.",
+    "No password fields in CSVs. Provision users via Bubble authentication workflows.",
+    "No payout transactions are fabricated: the supplied dataset contains aggregate paid totals and last payout dates only."
+  ]
+}

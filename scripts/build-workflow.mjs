@@ -1,0 +1,33 @@
+import{readFile,writeFile}from'node:fs/promises';
+const root=new URL('../',import.meta.url);
+const core=(await readFile(new URL('scripts/royalty.mjs',root),'utf8')).replaceAll('export ','');
+const code=async file=>await readFile(new URL(`automation/code/${file}.js`,root),'utf8');
+const nodes=[];let count=0;
+function add(name,type,parameters,position,extra={}){const n={id:`bookleaf-${++count}`,name,type:`n8n-nodes-base.${type}`,typeVersion:type==='httpRequest'?4.2:type==='webhook'?2:type==='if'?2.2:type==='respondToWebhook'?1.4:2,position,parameters,...extra};nodes.push(n);return n;}
+const auth=name=>({httpHeaderAuth:{name}});
+const condition=field=>({conditions:{options:{caseSensitive:true,leftValue:'',typeValidation:'strict',version:2},conditions:[{id:`condition-${field}`,leftValue:`={{ $json.${field} }}`,rightValue:true,operator:{type:'boolean',operation:'true',singleValue:true}}],combinator:'and'},options:{}});
+const http=(method,url,jsonBody,format='json')=>({method,url,authentication:'genericCredentialType',genericAuthType:'httpHeaderAuth',...(jsonBody?{sendBody:true,specifyBody:'json',jsonBody}:{}),options:{timeout:method==='GET'?5000:20000,response:{response:{fullResponse:true,responseFormat:format}}}});
+const logURL="={{ $('Verify log & duplicates').first().json.config.bubble_api_base + '/' + $('Verify log & duplicates').first().json.config.notification_type + '/' + $('Verify log & duplicates').first().json.request_id }}";
+add('Bubble royalty webhook','webhook',{httpMethod:'POST',path:'bookleaf-royalty-summary',authentication:'headerAuth',responseMode:'responseNode',options:{}},[0,0],{webhookId:'bookleaf-royalty-summary-v1',credentials:auth('BookLeaf webhook secret')});
+add('Validate & summarise','code',{jsCode:core+'\n'+await code('validate')},[240,0]);
+add('Valid request?','if',condition('valid'),[480,0]);
+add('Reject invalid request','respondToWebhook',{respondWith:'json',responseBody:'={{ $json.reply }}',options:{responseCode:'={{ $json.http_code }}'}},[720,260]);
+add('Read Bubble notification','httpRequest',http('GET',"={{ $json.config.bubble_api_base + '/' + $json.config.notification_type + '/' + $json.request_id }}"),[720,-100],{credentials:auth('BookLeaf Bubble API'),onError:'continueRegularOutput'});
+add('Verify log & duplicates','code',{jsCode:await code('preflight')},[960,-100]);
+add('Eligible request?','if',condition('run'),[1200,-100]);
+add('Return duplicate or error','respondToWebhook',{respondWith:'json',responseBody:'={{ $json.reply }}',options:{responseCode:'={{ $json.http_code }}'}},[1440,160]);
+add('Accept asynchronously','respondToWebhook',{respondWith:'json',responseBody:'={{ $json.reply }}',options:{responseCode:202}},[1440,-200]);
+add('Mark Processing','httpRequest',http('PATCH',logURL,'={{ JSON.stringify({ status: "Processing", error_message: "" }) }}','text'),[1680,-200],{credentials:auth('BookLeaf Bubble API'),onError:'continueRegularOutput'});
+add('Build AI request','code',{jsCode:await code('prompt')},[1920,-200]);
+add('Processing recorded?','if',condition('process_ok'),[2160,-200]);
+add('Generate AI prose','httpRequest',http('POST','={{ $json.config.llm_url }}','={{ JSON.stringify($json.llm_request) }}'),[2400,-300],{credentials:auth('BookLeaf LLM bearer token'),onError:'continueRegularOutput'});
+add('Validate output & compose email','code',{jsCode:core+'\n'+await code('assemble')},[2640,-300]);
+add('Update Bubble notification','httpRequest',http('PATCH',logURL,'={{ JSON.stringify($json.callback) }}','text'),[2880,-100],{credentials:auth('BookLeaf Bubble API'),retryOnFail:true,maxTries:3,waitBetweenTries:1500,onError:'continueRegularOutput'});
+add('Confirm callback','code',{jsCode:await code('callback-result')},[3120,-100]);
+nodes.push({id:'setup-note',name:'READ ME — configure before activation',type:'n8n-nodes-base.stickyNote',typeVersion:1,position:[0,-420],parameters:{width:1100,height:260,content:'## BookLeaf Assignment 2\n1. In Validate & summarise, replace YOUR-APP with your Bubble app slug and confirm notificationlog API type.\n2. Bind three Header Auth credentials: BookLeaf webhook secret (X-BookLeaf-Secret), BookLeaf Bubble API (Authorization: Bearer token), BookLeaf LLM bearer token (Authorization: Bearer provider key).\n3. Create a Bubble NotificationLog before invoking this webhook. request_id must equal its unique ID; author_external_id must match author_id.\n4. Use private server-side Bubble API Connector calls. Never expose the webhook secret in a page URL/client.\n5. Production self-hosting uses concurrency=1. Read docs/integration.md before enabling cloud concurrency.\nSuccess means content generated and saved, not email delivered. Real email sending is optional and is not wired in this export.'}});
+const connections={};
+function link(from,to,output=0){connections[from]??={main:[]};while(connections[from].main.length<=output)connections[from].main.push([]);connections[from].main[output].push({node:to,type:'main',index:0});}
+link('Bubble royalty webhook','Validate & summarise');link('Validate & summarise','Valid request?');link('Valid request?','Read Bubble notification');link('Valid request?','Reject invalid request',1);link('Read Bubble notification','Verify log & duplicates');link('Verify log & duplicates','Eligible request?');link('Eligible request?','Accept asynchronously');link('Eligible request?','Return duplicate or error',1);link('Accept asynchronously','Mark Processing');link('Mark Processing','Build AI request');link('Build AI request','Processing recorded?');link('Processing recorded?','Generate AI prose');link('Processing recorded?','Update Bubble notification',1);link('Generate AI prose','Validate output & compose email');link('Validate output & compose email','Update Bubble notification');link('Update Bubble notification','Confirm callback');
+const workflow={name:'BookLeaf — Royalty Summary & Bubble Callback',active:false,nodes,connections,settings:{executionOrder:'v1',saveManualExecutions:true,saveDataErrorExecution:'all',saveDataSuccessExecution:'none',executionTimeout:120},pinData:{},tags:[]};
+await writeFile(new URL('automation/bookleaf-royalty-summary.json',root),JSON.stringify(workflow,null,2)+'\n');
+console.log(`Generated n8n export with ${nodes.length} nodes. It is inactive; credentials and Bubble URL must be bound in n8n.`);
